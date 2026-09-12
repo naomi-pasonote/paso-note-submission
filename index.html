@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Paso Note｜提出用サンプル</title>
+<style>
+:root{--bg:#fffaf7;--card:#fff;--red:#7a1f2b;--gold:#c99b3b;--line:#eaded8;--text:#332b29;--muted:#7d716d}
+*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif;background:var(--bg);color:var(--text)}
+header{padding:18px 16px;background:var(--red);color:white}header h1{margin:0;font-size:24px}header p{margin:6px 0 0;font-size:13px;opacity:.9}.wrap{max-width:900px;margin:auto;padding:16px}.notice{background:#fff4d8;border:1px solid #ead39b;padding:12px 14px;border-radius:14px;margin-bottom:14px;line-height:1.55}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}.tab,.btn{border:1px solid var(--line);background:white;border-radius:999px;padding:9px 14px;cursor:pointer}.tab.active{background:var(--red);color:white;border-color:var(--red)}.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.toolbar input,.toolbar select,input,select,textarea{border:1px solid var(--line);border-radius:10px;padding:10px;background:white;font:inherit}.toolbar input{flex:1;min-width:180px}.btn.primary{background:var(--red);color:white;border-color:var(--red)}.btn.gold{background:var(--gold);color:white;border-color:var(--gold)}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin:10px 0;box-shadow:0 4px 14px rgba(70,40,30,.05)}.meta{font-size:12px;color:var(--muted);margin-bottom:6px}.chip{display:inline-block;padding:3px 8px;border-radius:999px;background:#f4e8e5;font-size:12px;margin-right:6px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.empty{text-align:center;color:var(--muted);padding:38px 12px;border:1px dashed var(--line);border-radius:16px;background:white}.modal{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;padding:18px}.hidden{display:none}.panel{background:white;border-radius:18px;padding:18px;max-width:520px;width:100%;max-height:90vh;overflow:auto}.panel label{display:block;font-size:13px;margin:10px 0 5px}.panel input,.panel select,.panel textarea{width:100%}.panel textarea{min-height:90px}.right{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}.small{font-size:12px;color:var(--muted)}
+</style>
+</head>
+<body>
+<header><h1>Paso Note</h1><p>フラメンコのレッスン記録・復習ノート</p></header>
+<div class="wrap">
+  <div class="notice"><strong>提出用サンプル版です。</strong><br>個人データ・Firebase・YouTubeの実URLには接続していません。ここで入力した内容は、このブラウザ内だけに保存されます。</div>
+  <div class="tabs">
+    <button class="tab active" data-tab="lessons">レッスン</button>
+    <button class="tab" data-tab="issues">課題</button>
+    <button class="tab" data-tab="notes">全体メモ</button>
+  </div>
+  <div class="toolbar">
+    <input id="search" placeholder="検索">
+    <select id="numeroFilter"><option value="">すべてのヌメロ</option></select>
+    <button class="btn primary" id="addBtn">＋追加</button>
+  </div>
+  <main id="main"></main>
+</div>
+<div id="modal" class="modal hidden"><div class="panel">
+  <h2 id="modalTitle">追加</h2>
+  <div id="lessonFields">
+    <label>日付</label><input id="date" type="date">
+    <label>ヌメロ</label><select id="numero"></select>
+    <label>レッスン内容</label><input id="content" placeholder="例：ファルーカ 振付">
+    <label>復習メモ</label><textarea id="memo" placeholder="注意点・次回までの課題など"></textarea>
+  </div>
+  <div id="issueFields" class="hidden">
+    <label>日付</label><input id="issueDate" type="date">
+    <label>ヌメロ</label><select id="issueNumero"></select>
+    <label>課題</label><textarea id="issueText" placeholder="例：ブラソを遠くへ"></textarea>
+  </div>
+  <div id="noteFields" class="hidden">
+    <label>日付</label><input id="noteDate" type="date">
+    <label>ヌメロ</label><select id="noteNumero"></select>
+    <label>全体メモ</label><textarea id="noteText"></textarea>
+  </div>
+  <div class="right"><button class="btn" id="cancelBtn">キャンセル</button><button class="btn gold" id="saveBtn">保存</button></div>
+</div></div>
+<script>
+const KEY='pasoNotePublicDemoV1';
+const NUMEROS=['カンティーニャ','アレグリ・ソロパート','グアヒーラソロ','ファルーカ','ファンタンゴ','セビジャーナス','パルマ','集中パルマ','タンゴ','ブレリア','その他'];
+let state={lessons:[],issues:[],notes:[]},tab='lessons',editingId=null;
+const $=id=>document.getElementById(id), uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8), today=()=>new Date().toISOString().slice(0,10);
+function esc(s){return String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function load(){try{const v=localStorage.getItem(KEY);if(v)state=Object.assign(state,JSON.parse(v))}catch(e){} render()}
+function save(){localStorage.setItem(KEY,JSON.stringify(state))}
+function fillSelect(id,blank=true){$(id).innerHTML=(blank?'<option value="">未設定</option>':'')+NUMEROS.map(n=>`<option>${esc(n)}</option>`).join('')}
+NUMEROS.forEach(n=>$('numeroFilter').insertAdjacentHTML('beforeend',`<option>${esc(n)}</option>`)); ['numero','issueNumero','noteNumero'].forEach(id=>fillSelect(id));
+function filtered(arr,fields){const q=$('search').value.trim().toLowerCase(), nf=$('numeroFilter').value;return arr.filter(x=>(!nf||x.numero===nf)&&(!q||fields.map(f=>x[f]||'').join(' ').toLowerCase().includes(q)))}
+function render(){document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab)); const main=$('main');
+ if(tab==='lessons'){const a=filtered(state.lessons,['date','numero','content','memo']).sort((x,y)=>y.date.localeCompare(x.date));main.innerHTML=a.length?a.map(x=>`<div class="card"><div class="meta">${esc(x.date)} <span class="chip">${esc(x.numero||'未設定')}</span></div><strong>${esc(x.content)}</strong><p>${esc(x.memo)}</p><div class="actions"><button class="btn" onclick="editItem('${x.id}')">編集</button><button class="btn" onclick="deleteItem('${x.id}')">削除</button></div></div>`).join(''):'<div class="empty">まだレッスン記録はありません。<br>「＋追加」からサンプル入力できます。</div>'}
+ if(tab==='issues'){const a=filtered(state.issues,['date','numero','text']);main.innerHTML=a.length?a.map(x=>`<div class="card"><div class="meta">${esc(x.date)} <span class="chip">${esc(x.numero||'未設定')}</span></div><p>${esc(x.text)}</p><div class="actions"><button class="btn gold" onclick="toggleIssue('${x.id}')">${x.done?'未解決に戻す':'✓ 解決済み'}</button><button class="btn" onclick="editItem('${x.id}')">編集</button><button class="btn" onclick="deleteItem('${x.id}')">削除</button></div></div>`).join(''):'<div class="empty">まだ課題はありません。</div>'}
+ if(tab==='notes'){const a=filtered(state.notes,['date','numero','text']);main.innerHTML=a.length?a.map(x=>`<div class="card"><div class="meta">${esc(x.date)} <span class="chip">${esc(x.numero||'未設定')}</span></div><p>${esc(x.text)}</p><div class="actions"><button class="btn" onclick="editItem('${x.id}')">編集</button><button class="btn" onclick="deleteItem('${x.id}')">削除</button></div></div>`).join(''):'<div class="empty">まだ全体メモはありません。</div>'}}
+function openModal(item=null){editingId=item?.id||null;$('modalTitle').textContent=item?'編集':'追加'; $('lessonFields').classList.toggle('hidden',tab!=='lessons');$('issueFields').classList.toggle('hidden',tab!=='issues');$('noteFields').classList.toggle('hidden',tab!=='notes');
+ if(tab==='lessons'){ $('date').value=item?.date||today();$('numero').value=item?.numero||'';$('content').value=item?.content||'';$('memo').value=item?.memo||''}
+ if(tab==='issues'){ $('issueDate').value=item?.date||today();$('issueNumero').value=item?.numero||'';$('issueText').value=item?.text||''}
+ if(tab==='notes'){ $('noteDate').value=item?.date||today();$('noteNumero').value=item?.numero||'';$('noteText').value=item?.text||''}
+ $('modal').classList.remove('hidden')}
+function closeModal(){$('modal').classList.add('hidden');editingId=null}
+function collection(){return state[tab]}
+function editItem(id){openModal(collection().find(x=>x.id===id))}
+function deleteItem(id){if(!confirm('削除しますか？'))return;state[tab]=collection().filter(x=>x.id!==id);save();render()}
+function toggleIssue(id){const x=state.issues.find(v=>v.id===id);if(x){x.done=!x.done;save();render()}}
+$('saveBtn').onclick=()=>{let obj;if(tab==='lessons'){if(!$('date').value||!$('content').value.trim())return alert('日付とレッスン内容を入力してください');obj={id:editingId||uid(),date:$('date').value,numero:$('numero').value,content:$('content').value.trim(),memo:$('memo').value.trim()}}
+ if(tab==='issues'){if(!$('issueText').value.trim())return alert('課題を入力してください');const old=state.issues.find(x=>x.id===editingId);obj={id:editingId||uid(),date:$('issueDate').value,numero:$('issueNumero').value,text:$('issueText').value.trim(),done:old?.done||false}}
+ if(tab==='notes'){if(!$('noteText').value.trim())return alert('メモを入力してください');obj={id:editingId||uid(),date:$('noteDate').value,numero:$('noteNumero').value,text:$('noteText').value.trim()}}
+ const a=collection(),i=a.findIndex(x=>x.id===obj.id);if(i>=0)a[i]=obj;else a.push(obj);save();closeModal();render()};
+$('addBtn').onclick=()=>openModal();$('cancelBtn').onclick=closeModal;$('search').oninput=render;$('numeroFilter').onchange=render;document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;editingId=null;render()});load();
+</script>
+</body></html>
